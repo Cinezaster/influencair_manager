@@ -17,11 +17,15 @@ exports.check = () => {
   const ParseSensor = Parse.Object.extend('Sensor')
   const query = new Parse.Query(ParseSensor)
   const web = new WebClient(process.env.slackBotToken)
+  
+  const latitude = process.env.latitude || 50.8531
+  const longitude = process.env.longitude || 4.3550
+  const radius = process.env.radius || 20
 
     // get list of all live sensors for brussels from luftdaten
     // https://api.luftdaten.info/v1/filter/area=50.8531,4.3550,20&type=SDS011
     // you end up with a list of 2 readings for each sensor
-  const luftdatenSensorUrl = 'https://api.luftdaten.info/v1/filter/area=50.8531,4.3550,20&type=SDS011'
+  const luftdatenSensorUrl = `https://api.luftdaten.info/v1/filter/area=${latitude},${longitude},${radius}`
 
   request({
     url: luftdatenSensorUrl,
@@ -30,10 +34,11 @@ exports.check = () => {
     if (!error && response.statusCode === 200) {
       const sensors = body.reduce((sensorList, measurement) => {
         const sensor = measurement.sensor
+        const sensorType = measurement.sensor_type
         const sensorExist = sensorList.find(sensorFromList => {
           return sensorFromList.id === sensor.id
         })
-        if (!sensorExist) sensorList.push(sensor)
+        if (!sensorExist && sensorType.name === 'SDS011') sensorList.push(sensor)
         return sensorList
       }, [])
 
@@ -47,9 +52,6 @@ exports.check = () => {
           })
 
           offlineSensors.forEach(sensor => {
-            if (sensor.get('offlineCounter') === 11) {
-                            //
-            }
             sensor.set('live', false)
             sensor.increment('offlineCounter')
             sensor.save()
@@ -63,14 +65,24 @@ exports.check = () => {
           })
 
           onlineSensors.forEach(sensor => {
+            if (sensor.get('offlineCounter') > 6) {
+              const slackHandler = sensor.get('alertSlack')
+              let message = ''
+              if (slackHandler) {
+                message = '<@' + slackHandler + '> your sensor with ID ' + sensor.get('luftdatenId') + ' is back online, Thank you'
+              } else {
+                message = 'Sensor with ID' + sensor.get('luftdatenId') + 'is back online'
+              }
+              web.chat.postMessage('sensor-network_status', message, {link_names: true, username: 'sensor-checker'})
+            }
             if (sensor.get('offlineCounter') > 0) {
               sensor.set('live', true)
               sensor.set('offlineCounter', 0)
               sensor.save()
             }
           })
-                    // console.log(offlineSensors)
-                    // get list of all new online sensors we don't have in our list
+
+          // get list of all new online sensors we don't have in our list
           const newOnlineSensors = sensors.filter(sensor => {
             const sensorIsRegistered = results.find(s => {
               return s.get('luftdatenId') === sensor.id
@@ -90,17 +102,27 @@ exports.check = () => {
           const statusMessage = `online: ${sensors.length}/${results.length}`
 
           web.chat.postMessage('sensor-network_status', statusMessage, {username: 'sensor-checker'})
-
+          
+          const offlineIds = []
           offlineSensors.forEach(sensor => {
-            const slackHandler = sensor.get('alertSlack')
-            let message = ''
-            if (slackHandler) {
-              message = '<@' + slackHandler + '> your sensor with ID ' + sensor.get('luftdatenId') + ' is offline'
-            } else {
-              message = 'Sensor with ID' + sensor.get('luftdatenId') + 'is offline'
+            
+            offlineIds.push(sensor.get('luftdatenId'))
+            
+            if (sensor.get('offlineCounter') === 6) {
+              const slackHandler = sensor.get('alertSlack')
+              let message = ''
+              if (slackHandler) {
+                message = '<@' + slackHandler + '> your sensor with ID ' + sensor.get('luftdatenId') + ' is offline'
+              } else {
+                message = 'Sensor with ID' + sensor.get('luftdatenId') + 'is offline'
+              }
+              web.chat.postMessage('sensor-network_status', message, {link_names: true, username: 'sensor-checker'})
             }
-            web.chat.postMessage('sensor-network_status', message, {link_names: true, username: 'sensor-checker'})
           })
+          
+          const OfflineIdsMessage = `Offline sensors: ${offlineIds.join()}`
+          web.chat.postMessage('sensor-network_status',OfflineIdsMessage , {username: 'sensor-checker'})
+          
         },
         error: function (error) {
           process.stdout.write('Error: ' + error.code + ' ' + error.message)

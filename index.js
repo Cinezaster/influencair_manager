@@ -1,7 +1,7 @@
 const CronJob = require('cron').CronJob
 const check4OfflineSensors = require('./check4OfflineSensor.js').check
 
-const job = new CronJob('0 */1 * * *', function () {
+const job = new CronJob('*/20 * * * *', function () {
   check4OfflineSensors()
 }, function () {
     /* This function is executed when the job stops */

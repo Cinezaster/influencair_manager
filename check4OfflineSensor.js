@@ -34,7 +34,7 @@ exports.check = () => {
     if (!error && response.statusCode === 200) {
       const sensors = body.reduce((sensorList, measurement) => {
         const sensor = measurement.sensor
-        const sensorType = measurement.sensor_type
+        const sensorType = sensor.sensor_type
         const sensorExist = sensorList.find(sensorFromList => {
           return sensorFromList.id === sensor.id
         })

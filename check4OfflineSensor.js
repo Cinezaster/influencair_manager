@@ -38,7 +38,7 @@ exports.check = () => {
         const sensorExist = sensorList.find(sensorFromList => {
           return sensorFromList.id === sensor.id
         })
-        if (!sensorExist && sensorType.name === 'SDS011') sensorList.push(sensor)
+        if (!sensorExist && sensorType.name === 'SDS011' || sensorType.name === 'HPM') sensorList.push(sensor)
         return sensorList
       }, [])
 
@@ -75,6 +75,7 @@ exports.check = () => {
               }
               web.chat.postMessage('sensor-network_status', message, {link_names: true, username: 'sensor-checker'})
             }
+            
             if (sensor.get('offlineCounter') > 0) {
               sensor.set('live', true)
               sensor.set('offlineCounter', 0)

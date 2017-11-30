@@ -71,7 +71,7 @@ exports.check = () => {
               if (slackHandler) {
                 message = '<@' + slackHandler + '> your sensor with ID ' + sensor.get('luftdatenId') + ' is back online, Thank you'
               } else {
-                message = 'Sensor with ID' + sensor.get('luftdatenId') + 'is back online'
+                message = 'Sensor with ID' + sensor.get('luftdatenId') + ' is back online'
               }
               web.chat.postMessage('sensor-network_status', message, {link_names: true, username: 'sensor-checker'})
             }
@@ -102,7 +102,7 @@ exports.check = () => {
 
           const statusMessage = `online: ${sensors.length}/${results.length}`
 
-          web.chat.postMessage('sensor-network_status', statusMessage, {username: 'sensor-checker'})
+          // web.chat.postMessage('sensor-network_status', statusMessage, {username: 'sensor-checker'})
           
           const offlineIds = []
           offlineSensors.forEach(sensor => {
@@ -122,7 +122,7 @@ exports.check = () => {
           })
           
           const OfflineIdsMessage = `Offline sensors: ${offlineIds.join()}`
-          web.chat.postMessage('sensor-network_status',OfflineIdsMessage , {username: 'sensor-checker'})
+          // web.chat.postMessage('sensor-network_status',OfflineIdsMessage , {username: 'sensor-checker'})
           
         },
         error: function (error) {
